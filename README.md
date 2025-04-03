@@ -182,3 +182,245 @@ OpenManus is built by contributors from MetaGPT. Huge thanks to this agent commu
   howpublished = {\url{https://github.com/mannaandpoem/OpenManus}},
 }
 ```
+
+# OpenManus-AutoQuant (自动量化交易系统)
+
+OpenManus-AutoQuant 是一个自动化的量化交易分析系统，能够自动获取股票数据、分析市场状况、生成交易策略、执行回测并优化策略参数。
+
+## 主要功能
+
+1. **股票数据获取**：自动从AKShare获取股票的历史价格数据和基本面数据
+2. **技术指标分析**：计算并分析多种技术指标（RSI、MACD、布林带等）
+3. **市场状况评估**：根据技术指标和基本面数据评估市场环境
+4. **策略生成**：根据分析结果自动生成适合当前市场状况的交易策略代码
+5. **回测**：使用Backtrader框架对生成的策略进行回测
+6. **策略优化**：自动优化策略参数以提高性能
+
+## 支持的策略类型
+
+- 动量策略（Momentum）
+- 趋势跟踪（Trend Following）
+- 均值回归（Mean Reversion）
+- 双均线交叉（Dual MA Crossover）
+- MACD策略
+- RSI策略
+- 布林带策略
+- 自定义组合策略
+
+## 系统架构
+
+```
+app/
+├── main.py              # 主程序
+├── tool/
+│   ├── base.py          # 基础工具类
+│   ├── stock_data_fetch.py    # 股票数据获取工具
+│   ├── stock_analysis.py      # 股票分析工具
+│   ├── strategy_generator.py  # 策略生成工具
+│   ├── backtest.py      # 回测工具
+│   └── strategy_optimizer.py  # 策略优化工具
+└── utils/
+    └── data_utils.py    # 数据处理工具函数
+```
+
+## 安装指南
+
+### 前置条件
+
+- Python 3.8+
+- pip（Python包管理器）
+
+### 安装依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+### 依赖项
+
+- akshare：获取股票数据
+- pandas：数据处理
+- numpy：数值计算
+- matplotlib：可视化图表
+- backtrader：回测框架
+- talib：技术指标计算
+- scikit-learn：机器学习算法（用于高级分析）
+
+## 使用方法
+
+### 基本用法
+
+```python
+import asyncio
+from app.main import AutoQuantSystem
+
+async def example():
+    system = AutoQuantSystem()
+
+    # 运行完整流程
+    results = await system.run_full_pipeline(
+        stock_code="000001",    # 股票代码
+        start_date="2020-01-01", # 开始日期
+        end_date="2022-12-31",   # 结束日期
+        strategy_type="momentum",  # 策略类型
+        optimize_strategy=True     # 是否优化策略
+    )
+
+    print(results)
+
+# 运行示例
+asyncio.run(example())
+```
+
+### 分步骤使用
+
+```python
+import asyncio
+import json
+from app.main import AutoQuantSystem
+
+async def step_by_step_example():
+    system = AutoQuantSystem()
+
+    # 1. 获取股票数据
+    data = await system.fetch_stock_data(
+        stock_code="000001",
+        start_date="2020-01-01",
+        end_date="2022-12-31"
+    )
+    data_file = data["history"]["csv_file"]
+
+    # 2. 分析股票
+    analysis = await system.analyze_stock(
+        stock_code="000001",
+        data_file=data_file
+    )
+
+    # 3. 生成策略
+    strategy = await system.generate_strategy(
+        strategy_type="trend_following",
+        analysis_results=analysis
+    )
+    strategy_file = strategy["strategy_file"]
+
+    # 4. 运行回测
+    backtest = await system.run_backtest(
+        strategy_file=strategy_file,
+        data_file=data_file,
+        start_date="2020-01-01",
+        end_date="2022-12-31"
+    )
+
+    # 5. 优化策略
+    parameters_to_optimize = {
+        "fast_period": {"start": 10, "end": 30, "step": 5},
+        "slow_period": {"start": 30, "end": 60, "step": 10}
+    }
+
+    optimization = await system.optimize_strategy(
+        strategy_file=strategy_file,
+        data_file=data_file,
+        start_date="2020-01-01",
+        end_date="2022-12-31",
+        parameters_to_optimize=parameters_to_optimize
+    )
+
+    print(json.dumps({
+        "data": data,
+        "analysis": analysis,
+        "strategy": strategy,
+        "backtest": backtest,
+        "optimization": optimization
+    }, indent=2))
+
+# 运行示例
+asyncio.run(step_by_step_example())
+```
+
+## 工具使用说明
+
+### 股票数据获取工具 (StockDataFetchTool)
+
+提供以下功能：
+
+- `get_stock_history`: 获取股票历史价格数据
+- `get_stock_fundamental`: 获取股票基本面数据
+- `get_index_data`: 获取指数数据
+- `search_stock`: 搜索股票信息
+
+### 股票分析工具 (StockAnalysisTool)
+
+提供以下功能：
+
+- `analyze_stock`: 全面分析股票
+- `calculate_indicators`: 计算技术指标
+- `analyze_market_condition`: 分析市场环境
+- `generate_trading_signals`: 生成交易信号
+
+### 策略生成工具 (StrategyGeneratorTool)
+
+提供以下功能：
+
+- `generate_strategy`: 生成交易策略
+- `get_strategy_template`: 获取策略模板
+- `list_available_strategies`: 列出可用策略类型
+
+### 回测工具 (BacktestTool)
+
+提供以下功能：
+
+- `run_backtest`: 运行回测
+- `analyze_results`: 分析回测结果
+- `plot_performance`: 绘制性能图表
+
+### 策略优化工具 (StrategyOptimizerTool)
+
+提供以下功能：
+
+- `optimize_parameters`: 优化策略参数
+- `generate_optimization_report`: 生成优化报告
+- `get_optimization_status`: 获取优化状态
+
+## 示例输出
+
+策略回测报告示例：
+
+```json
+{
+  "result_id": "backtest_20230501123456",
+  "strategy": "momentum_strategy.py",
+  "data": "000001.csv",
+  "summary": {
+    "final_value": 125463.25,
+    "total_return_pct": 25.46,
+    "annual_return": 12.15,
+    "sharpe_ratio": 1.32,
+    "max_drawdown": 8.75,
+    "total_trades": 42,
+    "win_rate": 68.5,
+    "profit_loss_ratio": 2.1
+  }
+}
+```
+
+## 注意事项
+
+1. 数据获取需要有稳定的网络连接
+2. 回测结果不代表未来表现
+3. 使用实盘交易前请充分测试策略
+
+## 后续开发计划
+
+1. 添加机器学习模型预测股价走势
+2. 支持更多数据源和国际市场
+3. 开发图形用户界面
+4. 增加实盘交易接口
+5. 添加风险管理模块
+
+## 贡献指南
+
+欢迎提交Pull Request或Issue来帮助改进项目。
+
+## 许可证
+
+MIT License

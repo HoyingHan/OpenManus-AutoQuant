@@ -81,6 +81,8 @@ source .venv/bin/activate  # Unix/macOS 系统
 
 ```bash
 uv pip install -r requirements.txt
+
+uv pip install -r requirements.txt --index-url https://mirrors.aliyun.com/pypi/simple/
 ```
 
 ### 浏览器自动化工具（可选）
