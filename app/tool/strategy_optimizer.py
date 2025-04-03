@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 from typing import Dict, List, Optional, Tuple, Any
-import datetime
+from datetime import datetime
 import pandas as pd
 import numpy as np
 import backtrader as bt
@@ -109,19 +109,19 @@ class StrategyOptimizerTool(BaseTool):
                 if not strategy_file or not data_file or not parameters_to_optimize:
                     return ToolResult(error="策略文件、数据文件和优化参数是必需的")
 
-                # 转换日期（如果提供）
+                # 转换日期格式如果提供
                 start_date_obj = None
                 end_date_obj = None
 
                 if start_date:
                     try:
-                        start_date_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+                        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
                     except ValueError:
                         return ToolResult(error=f"无效的开始日期格式: {start_date}，请使用YYYY-MM-DD格式")
 
                 if end_date:
                     try:
-                        end_date_obj = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+                        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
                     except ValueError:
                         return ToolResult(error=f"无效的结束日期格式: {end_date}，请使用YYYY-MM-DD格式")
 
@@ -165,8 +165,8 @@ class StrategyOptimizerTool(BaseTool):
         self,
         strategy_file: str,
         data_file: str,
-        start_date: Optional[datetime.datetime] = None,
-        end_date: Optional[datetime.datetime] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
         initial_capital: float = 100000.0,
         commission: float = 0.001,
         optimization_method: str = "grid_search",
@@ -392,7 +392,7 @@ class StrategyOptimizerTool(BaseTool):
                 # 准备结果对象
                 output_results = {
                     "id": optimization_id,
-                    "timestamp": datetime.datetime.now().isoformat(),
+                    "timestamp": datetime.now().isoformat(),
                     "strategy": os.path.basename(strategy_file),
                     "data": os.path.basename(data_file),
                     "optimization_method": optimization_method,

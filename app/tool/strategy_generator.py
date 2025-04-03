@@ -2,7 +2,7 @@
 
 import os
 from typing import Dict, List, Optional, Tuple, Any
-import datetime
+from datetime import datetime, timedelta
 import json
 import re
 
@@ -15,43 +15,26 @@ class StrategyGeneratorTool(BaseTool):
 
     name: str = "strategy_generator"
     description: str = (
-        "Generates backtrader trading strategy code based on stock analysis results. "
-        "Creates Python code for technical indicator strategies, pattern recognition, and more."
+        "生成基于股票分析结果的动态交易策略。"
+        "根据技术指标、市场趋势和波动性自动创建适应性强的交易策略代码。"
     )
     parameters: dict = {
         "type": "object",
         "properties": {
             "command": {
                 "type": "string",
-                "description": "Strategy generation command to execute",
+                "description": "策略生成命令",
                 "enum": [
                     "generate_strategy",
-                    "get_strategy_template",
-                    "list_available_strategies",
-                ],
-            },
-            "strategy_type": {
-                "type": "string",
-                "description": "Type of strategy to generate",
-                "enum": [
-                    "dynamic",        # 根据分析结果动态生成策略（推荐）
-                    "momentum",
-                    "trend_following",
-                    "mean_reversion",
-                    "dual_ma_crossover",
-                    "macd",
-                    "rsi",
-                    "bollinger_bands",
-                    "custom",
                 ],
             },
             "analysis_results": {
                 "type": "object",
-                "description": "Results from stock analysis to base the strategy on",
+                "description": "股票分析结果，用于生成策略",
             },
             "risk_params": {
                 "type": "object",
-                "description": "Risk parameters for the strategy",
+                "description": "策略风险参数",
                 "properties": {
                     "target_annual_return": {"type": "number"},
                     "max_drawdown": {"type": "number"},
@@ -61,9 +44,8 @@ class StrategyGeneratorTool(BaseTool):
             },
             "custom_params": {
                 "type": "object",
-                "description": "Custom parameters for strategy customization",
+                "description": "策略自定义参数",
                 "properties": {
-                    "use_dynamic_generation": {"type": "boolean"},
                     "use_sma": {"type": "boolean"},
                     "use_rsi": {"type": "boolean"},
                     "use_macd": {"type": "boolean"},
@@ -84,99 +66,44 @@ class StrategyGeneratorTool(BaseTool):
                 },
             },
         },
-        "required": ["command"],
+        "required": ["command", "analysis_results"],
     }
 
     async def execute(
         self,
         command: str,
-        strategy_type: Optional[str] = None,
         analysis_results: Optional[Dict] = None,
         risk_params: Optional[Dict] = None,
         custom_params: Optional[Dict] = None,
+        strategy_type: Optional[str] = None,  # 兼容旧接口，但不使用此参数
         **kwargs,
     ) -> ToolResult:
-        """Execute the strategy generation command."""
+        """执行策略生成命令。"""
 
         try:
             if command == "generate_strategy":
-                if not strategy_type or not analysis_results:
-                    return ToolResult(error="Strategy type and analysis results are required for generate_strategy command")
+                if not analysis_results:
+                    return ToolResult(error="生成策略需要提供分析结果(analysis_results)")
 
-                result = self._generate_strategy(strategy_type, analysis_results, risk_params, custom_params)
+                result = self._generate_strategy(analysis_results, risk_params, custom_params)
                 return result
-
-            elif command == "get_strategy_template":
-                if not strategy_type:
-                    return ToolResult(error="Strategy type is required for get_strategy_template command")
-
-                result = self._get_strategy_template(strategy_type)
-                return result
-
-            elif command == "list_available_strategies":
-                result = self._list_available_strategies()
-                return result
-
             else:
-                return ToolResult(error=f"Unknown command: {command}")
+                return ToolResult(error=f"未知命令: {command}")
 
         except Exception as e:
-            return ToolResult(error=f"Error executing command {command}: {str(e)}")
-
-    def _list_available_strategies(self) -> ToolResult:
-        """List all available strategy types with descriptions."""
-        strategies = {
-            "dynamic": "智能动态策略，根据市场分析结果自动构建最适合的策略逻辑和参数组合",
-            "momentum": "Strategy based on price momentum indicators like RSI and MACD, entering when momentum is strong",
-            "trend_following": "Strategy that identifies and follows market trends using moving averages and trend indicators",
-            "mean_reversion": "Strategy that capitalizes on price movements returning to the mean, using indicators like Bollinger Bands",
-            "dual_ma_crossover": "Classic strategy using two moving averages of different periods to generate entry/exit signals",
-            "macd": "Strategy based solely on MACD (Moving Average Convergence Divergence) signals",
-            "rsi": "Strategy trading overbought and oversold conditions using the Relative Strength Index",
-            "bollinger_bands": "Strategy trading price movements relative to Bollinger Bands",
-            "custom": "Custom strategy combining multiple indicators based on market analysis"
-        }
-
-        return ToolResult(output=json.dumps({
-            "available_strategies": strategies,
-            "recommendation": "推荐使用'dynamic'策略类型，它能根据具体分析结果动态生成最优策略组合。"
-        }, ensure_ascii=False, indent=2))
-
-    def _get_strategy_template(self, strategy_type: str) -> ToolResult:
-        """Get a template for the specified strategy type."""
-        templates = {
-            "momentum": self._momentum_strategy_template(),
-            "trend_following": self._trend_following_strategy_template(),
-            "mean_reversion": self._mean_reversion_strategy_template(),
-            "dual_ma_crossover": self._dual_ma_crossover_strategy_template(),
-            "macd": self._macd_strategy_template(),
-            "rsi": self._rsi_strategy_template(),
-            "bollinger_bands": self._bollinger_bands_strategy_template(),
-            "custom": self._custom_strategy_template(),
-        }
-
-        if strategy_type not in templates:
-            return ToolResult(error=f"Unknown strategy type: {strategy_type}")
-
-        return ToolResult(output=json.dumps({
-            "strategy_type": strategy_type,
-            "template": templates[strategy_type],
-            "usage_instructions": "This template can be customized with specific parameters based on stock analysis."
-        }, ensure_ascii=False, indent=2))
+            return ToolResult(error=f"执行命令 {command} 时出错: {str(e)}")
 
     def _generate_strategy(
         self,
-        strategy_type: str,
         analysis_results: Dict,
         risk_params: Optional[Dict] = None,
         custom_params: Optional[Dict] = None
     ) -> ToolResult:
         """
-        根据分析结果和参数生成交易策略。
+        根据分析结果和参数生成动态交易策略。
         生成的策略代码将保存到工作空间。
 
         参数:
-            strategy_type: 策略类型
             analysis_results: 分析结果
             risk_params: 风险参数
             custom_params: 自定义参数
@@ -199,34 +126,11 @@ class StrategyGeneratorTool(BaseTool):
         # 处理分析结果并提取关键见解
         strategy_insights = self._extract_strategy_insights(analysis_results)
 
-        # 新的动态策略生成方法
-        if strategy_type == "dynamic" or custom_params and custom_params.get("use_dynamic_generation", False):
-            logger.info("使用动态策略生成逻辑创建策略")
-            strategy_code = self._generate_dynamic_strategy(strategy_insights, risk_params, custom_params, analysis_results)
-        # 保留原有生成方法作为备选
-        elif strategy_type == "momentum":
-            strategy_code = self._generate_momentum_strategy(strategy_insights, risk_params, custom_params)
-        elif strategy_type == "trend_following":
-            strategy_code = self._generate_trend_following_strategy(strategy_insights, risk_params, custom_params)
-        elif strategy_type == "mean_reversion":
-            strategy_code = self._generate_mean_reversion_strategy(strategy_insights, risk_params, custom_params)
-        elif strategy_type == "dual_ma_crossover":
-            strategy_code = self._generate_dual_ma_crossover_strategy(strategy_insights, risk_params, custom_params)
-        elif strategy_type == "macd":
-            strategy_code = self._generate_macd_strategy(strategy_insights, risk_params, custom_params)
-        elif strategy_type == "rsi":
-            strategy_code = self._generate_rsi_strategy(strategy_insights, risk_params, custom_params)
-        elif strategy_type == "bollinger_bands":
-            strategy_code = self._generate_bollinger_bands_strategy(strategy_insights, risk_params, custom_params)
-        elif strategy_type == "custom":
-            strategy_code = self._generate_custom_strategy(strategy_insights, risk_params, custom_params)
-        else:
-            # 默认使用动态策略生成
-            logger.info(f"未知策略类型 '{strategy_type}'，使用动态策略生成")
-            strategy_code = self._generate_dynamic_strategy(strategy_insights, risk_params, custom_params, analysis_results)
+        # 生成动态策略代码
+        strategy_code = self._generate_dynamic_strategy(strategy_insights, risk_params, custom_params, analysis_results)
 
         # 生成唯一ID用于策略文件
-        strategy_id = generate_timestamp_id(f"{strategy_type}_strategy")
+        strategy_id = generate_timestamp_id("dynamic_strategy")
         strategy_filename = f"{strategy_id}.py"
 
         # 保存策略到工作空间
@@ -237,12 +141,12 @@ class StrategyGeneratorTool(BaseTool):
             # 保存策略元数据
             strategy_metadata = {
                 "id": strategy_id,
-                "strategy_type": strategy_type,
+                "strategy_type": "dynamic",
                 "strategy_file": strategy_file_path,
                 "risk_parameters": risk_params,
                 "strategy_insights": strategy_insights,
                 "custom_parameters": custom_params,
-                "timestamp": datetime.datetime.now().isoformat(),
+                "timestamp": datetime.now().isoformat(),
                 "analysis_results_id": analysis_results.get("id", "unknown")
             }
 
@@ -256,7 +160,7 @@ class StrategyGeneratorTool(BaseTool):
 
         return ToolResult(output=json.dumps({
             "strategy_id": strategy_id,
-            "strategy_type": strategy_type,
+            "strategy_type": "dynamic",
             "strategy_file": strategy_file_path,
             "metadata_file": metadata_path,
             "risk_parameters": risk_params,
@@ -371,557 +275,6 @@ class StrategyGeneratorTool(BaseTool):
                 insights["recommended_action"] = "hold"
 
         return insights
-
-    def _generate_momentum_strategy(
-        self,
-        insights: Dict,
-        risk_params: Dict,
-        custom_params: Optional[Dict] = None
-    ) -> str:
-        """Generate a momentum-based trading strategy."""
-        # Use custom params if provided, otherwise use defaults optimized for insights
-        params = custom_params or {}
-
-        # Set default parameters optimized for the stock's characteristics
-        rsi_period = params.get("rsi_period", 14)
-        rsi_overbought = params.get("rsi_overbought", 70)
-        rsi_oversold = params.get("rsi_oversold", 30)
-
-        # Adjust parameters based on insights
-        if insights["volatility"]["level"] == "high":
-            rsi_overbought = params.get("rsi_overbought", 75)  # More conservative
-            rsi_oversold = params.get("rsi_oversold", 25)      # More conservative
-
-        # Generate strategy code
-        strategy_code = f"""#!/usr/bin/env python
-# -*- coding: utf-8; py-indent-offset:4 -*-
-#
-# Momentum Strategy generated based on stock analysis
-#
-# This strategy uses RSI and MACD indicators to identify momentum
-# and generate trading signals.
-
-import backtrader as bt
-import datetime
-
-
-class MomentumStrategy(bt.Strategy):
-    params = (
-        ('rsi_period', {rsi_period}),
-        ('rsi_overbought', {rsi_overbought}),
-        ('rsi_oversold', {rsi_oversold}),
-        ('macd1', 12),
-        ('macd2', 26),
-        ('macdsig', 9),
-        ('target_annual_return', {risk_params.get('target_annual_return', 0.15)}),
-        ('max_drawdown', {risk_params.get('max_drawdown', 0.20)}),
-        ('trail_percent', {insights["volatility"]["atr_percentage"]}),
-    )
-
-    def log(self, txt, dt=None):
-        dt = dt or self.datas[0].datetime.date(0)
-        print(f'{{dt.isoformat()}} {{txt}}')
-
-    def __init__(self):
-        # Keep track of pending orders
-        self.order = None
-        self.buyprice = None
-        self.buycomm = None
-
-        # Add RSI indicator
-        self.rsi = bt.indicators.RelativeStrengthIndex(
-            period=self.params.rsi_period
-        )
-
-        # Add MACD indicator
-        self.macd = bt.indicators.MACD(
-            self.data.close,
-            period_me1=self.params.macd1,
-            period_me2=self.params.macd2,
-            period_signal=self.params.macdsig
-        )
-
-    def notify_order(self, order):
-        if order.status in [order.Submitted, order.Accepted]:
-            # Order submitted/accepted - no action required
-            return
-
-        # Check if an order has been completed
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                self.log(f'BUY EXECUTED, Price: {{order.executed.price:.2f}}, '
-                         f'Cost: {{order.executed.value:.2f}}, '
-                         f'Comm: {{order.executed.comm:.2f}}')
-                self.buyprice = order.executed.price
-                self.buycomm = order.executed.comm
-            else:
-                self.log(f'SELL EXECUTED, Price: {{order.executed.price:.2f}}, '
-                         f'Cost: {{order.executed.value:.2f}}, '
-                         f'Comm: {{order.executed.comm:.2f}}')
-
-            self.bar_executed = len(self)
-
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
-
-        # Reset orders
-        self.order = None
-
-    def notify_trade(self, trade):
-        if not trade.isclosed:
-            return
-
-        self.log(f'OPERATION PROFIT, GROSS: {{trade.pnl:.2f}}, NET: {{trade.pnlcomm:.2f}}')
-
-    def next(self):
-        # Check if an order is pending
-        if self.order:
-            return
-
-        # Check if we are in the market
-        if not self.position:
-            # Not in the market, look for buy signal
-
-            # Buy Signal: RSI below oversold threshold and MACD line crosses above signal line
-            if self.rsi < self.params.rsi_oversold and self.macd.macd > self.macd.signal:
-                self.log(f'BUY CREATE, {{self.data.close[0]:.2f}}')
-                self.order = self.buy()
-
-                # Set trailing stop loss based on volatility
-                self.sell(exectype=bt.Order.StopTrail, trailpercent=self.params.trail_percent)
-        else:
-            # Already in the market, look for sell signal
-
-            # Sell Signal: RSI above overbought threshold and MACD line crosses below signal line
-            if self.rsi > self.params.rsi_overbought and self.macd.macd < self.macd.signal:
-                self.log(f'SELL CREATE, {{self.data.close[0]:.2f}}')
-                self.order = self.sell()
-
-
-if __name__ == '__main__':
-    # Create a cerebro entity
-    cerebro = bt.Cerebro()
-
-    # Add a strategy
-    cerebro.addstrategy(MomentumStrategy)
-
-    # Set up the data feed
-    data = bt.feeds.YahooFinanceCSVData(
-        dataname='data.csv',
-        fromdate=datetime.datetime(2019, 1, 1),
-        todate=datetime.datetime(2020, 12, 31),
-        reverse=False)
-
-    # Add the Data Feed to Cerebro
-    cerebro.adddata(data)
-
-    # Set our desired cash start
-    cerebro.broker.setcash(100000.0)
-
-    # Set the commission - 0.1% ... divide by 100 to remove the %
-    cerebro.broker.setcommission(commission=0.001)
-
-    # Print out the starting conditions
-    print(f'Starting Portfolio Value: {{cerebro.broker.getvalue():.2f}}')
-
-    # Run over everything
-    cerebro.run()
-
-    # Print out the final result
-    print(f'Final Portfolio Value: {{cerebro.broker.getvalue():.2f}}')
-
-    # Plot the result
-    cerebro.plot()
-"""
-        return strategy_code
-
-    def _generate_trend_following_strategy(
-        self,
-        insights: Dict,
-        risk_params: Dict,
-        custom_params: Optional[Dict] = None
-    ) -> str:
-        """Generate a trend-following trading strategy."""
-        # Use custom params if provided, otherwise use defaults optimized for insights
-        params = custom_params or {}
-
-        # Determine optimal parameters based on stock volatility and trend
-        fast_period = params.get("fast_period", 20)
-        slow_period = params.get("slow_period", 50)
-
-        # Adjust parameters based on volatility
-        if insights["volatility"]["level"] == "high":
-            fast_period = params.get("fast_period", 25)  # Slower for high volatility
-            slow_period = params.get("slow_period", 75)  # Longer trend for high volatility
-        elif insights["volatility"]["level"] == "low":
-            fast_period = params.get("fast_period", 15)  # Faster for low volatility
-            slow_period = params.get("slow_period", 40)  # Shorter trend for low volatility
-
-        # Generate strategy code
-        strategy_code = f"""#!/usr/bin/env python
-# -*- coding: utf-8; py-indent-offset:4 -*-
-#
-# Trend Following Strategy generated based on stock analysis
-#
-# This strategy uses dual moving averages to follow trends
-# and generate trading signals.
-
-import backtrader as bt
-import datetime
-
-
-class TrendFollowingStrategy(bt.Strategy):
-    params = (
-        ('fast_period', {fast_period}),
-        ('slow_period', {slow_period}),
-        ('atr_period', 14),
-        ('atr_distance', 2.0),
-        ('target_annual_return', {risk_params.get('target_annual_return', 0.15)}),
-        ('max_drawdown', {risk_params.get('max_drawdown', 0.20)}),
-    )
-
-    def log(self, txt, dt=None):
-        dt = dt or self.datas[0].datetime.date(0)
-        print(f'{{dt.isoformat()}} {{txt}}')
-
-    def __init__(self):
-        # Keep track of pending orders
-        self.order = None
-
-        # Add moving average indicators
-        self.fast_ma = bt.indicators.SimpleMovingAverage(
-            self.data.close, period=self.params.fast_period
-        )
-        self.slow_ma = bt.indicators.SimpleMovingAverage(
-            self.data.close, period=self.params.slow_period
-        )
-
-        # Add crossover indicator
-        self.crossover = bt.indicators.CrossOver(self.fast_ma, self.slow_ma)
-
-        # Add ATR for stop loss calculation
-        self.atr = bt.indicators.ATR(self.data, period=self.params.atr_period)
-
-    def notify_order(self, order):
-        if order.status in [order.Submitted, order.Accepted]:
-            # Order submitted/accepted - no action required
-            return
-
-        # Check if an order has been completed
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                self.log(f'BUY EXECUTED, Price: {{order.executed.price:.2f}}, '
-                         f'Cost: {{order.executed.value:.2f}}, '
-                         f'Comm: {{order.executed.comm:.2f}}')
-            else:
-                self.log(f'SELL EXECUTED, Price: {{order.executed.price:.2f}}, '
-                         f'Cost: {{order.executed.value:.2f}}, '
-                         f'Comm: {{order.executed.comm:.2f}}')
-
-            self.bar_executed = len(self)
-
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
-
-        # Reset orders
-        self.order = None
-
-    def notify_trade(self, trade):
-        if not trade.isclosed:
-            return
-
-        self.log(f'OPERATION PROFIT, GROSS: {{trade.pnl:.2f}}, NET: {{trade.pnlcomm:.2f}}')
-
-    def next(self):
-        # Check if an order is pending
-        if self.order:
-            return
-
-        # Check if we are in the market
-        if not self.position:
-            # Not in the market, look for buy signal
-
-            # Buy when fast MA crosses above slow MA
-            if self.crossover > 0:
-                self.log(f'BUY CREATE, {{self.data.close[0]:.2f}}')
-                self.order = self.buy()
-
-                # Calculate stop loss based on ATR
-                stop_price = self.data.close[0] - self.params.atr_distance * self.atr[0]
-                self.sell(exectype=bt.Order.Stop, price=stop_price)
-
-        else:
-            # Already in the market, look for sell signal
-
-            # Sell when fast MA crosses below slow MA
-            if self.crossover < 0:
-                self.log(f'SELL CREATE, {{self.data.close[0]:.2f}}')
-                self.order = self.sell()
-
-
-if __name__ == '__main__':
-    # Create a cerebro entity
-    cerebro = bt.Cerebro()
-
-    # Add a strategy
-    cerebro.addstrategy(TrendFollowingStrategy)
-
-    # Set up the data feed
-    data = bt.feeds.YahooFinanceCSVData(
-        dataname='data.csv',
-        fromdate=datetime.datetime(2019, 1, 1),
-        todate=datetime.datetime(2020, 12, 31),
-        reverse=False)
-
-    # Add the Data Feed to Cerebro
-    cerebro.adddata(data)
-
-    # Set our desired cash start
-    cerebro.broker.setcash(100000.0)
-
-    # Set the commission - 0.1% ... divide by 100 to remove the %
-    cerebro.broker.setcommission(commission=0.001)
-
-    # Print out the starting conditions
-    print(f'Starting Portfolio Value: {{cerebro.broker.getvalue():.2f}}')
-
-    # Run over everything
-    cerebro.run()
-
-    # Print out the final result
-    print(f'Final Portfolio Value: {{cerebro.broker.getvalue():.2f}}')
-
-    # Plot the result
-    cerebro.plot()
-"""
-        return strategy_code
-
-    def _generate_mean_reversion_strategy(self, insights: Dict, risk_params: Dict, custom_params: Optional[Dict] = None) -> str:
-        """Generate placeholders for other strategy types."""
-        # Template code (truncated for brevity)
-        return """
-# Mean Reversion Strategy
-import backtrader as bt
-
-class MeanReversionStrategy(bt.Strategy):
-    # Implementation goes here
-    pass
-"""
-
-    def _generate_dual_ma_crossover_strategy(self, insights: Dict, risk_params: Dict, custom_params: Optional[Dict] = None) -> str:
-        return """
-# Dual MA Crossover Strategy
-import backtrader as bt
-
-class DualMACrossoverStrategy(bt.Strategy):
-    # Implementation goes here
-    pass
-"""
-
-    def _generate_macd_strategy(self, insights: Dict, risk_params: Dict, custom_params: Optional[Dict] = None) -> str:
-        return """
-# MACD Strategy
-import backtrader as bt
-
-class MACDStrategy(bt.Strategy):
-    # Implementation goes here
-    pass
-"""
-
-    def _generate_rsi_strategy(self, insights: Dict, risk_params: Dict, custom_params: Optional[Dict] = None) -> str:
-        return """
-# RSI Strategy
-import backtrader as bt
-
-class RSIStrategy(bt.Strategy):
-    # Implementation goes here
-    pass
-"""
-
-    def _generate_bollinger_bands_strategy(self, insights: Dict, risk_params: Dict, custom_params: Optional[Dict] = None) -> str:
-        return """
-# Bollinger Bands Strategy
-import backtrader as bt
-
-class BollingerBandsStrategy(bt.Strategy):
-    # Implementation goes here
-    pass
-"""
-
-    def _generate_custom_strategy(self, insights: Dict, risk_params: Dict, custom_params: Optional[Dict] = None) -> str:
-        return """
-# Custom Combined Strategy
-import backtrader as bt
-
-class CustomStrategy(bt.Strategy):
-    # Implementation goes here
-    pass
-"""
-
-    def _momentum_strategy_template(self) -> str:
-        return """
-# Momentum Strategy Template
-import backtrader as bt
-
-class MomentumStrategy(bt.Strategy):
-    params = (
-        ('rsi_period', 14),
-        ('rsi_overbought', 70),
-        ('rsi_oversold', 30),
-        ('macd1', 12),
-        ('macd2', 26),
-        ('macdsig', 9),
-    )
-
-    def __init__(self):
-        # Add your indicators here
-        pass
-
-    def next(self):
-        # Add your trading logic here
-        pass
-"""
-
-    def _trend_following_strategy_template(self) -> str:
-        return """
-# Trend Following Strategy Template
-import backtrader as bt
-
-class TrendFollowingStrategy(bt.Strategy):
-    params = (
-        ('fast_period', 20),
-        ('slow_period', 50),
-    )
-
-    def __init__(self):
-        # Add your indicators here
-        pass
-
-    def next(self):
-        # Add your trading logic here
-        pass
-"""
-
-    def _mean_reversion_strategy_template(self) -> str:
-        return """
-# Mean Reversion Strategy Template
-import backtrader as bt
-
-class MeanReversionStrategy(bt.Strategy):
-    params = (
-        ('bb_period', 20),
-        ('bb_devfactor', 2),
-    )
-
-    def __init__(self):
-        # Add your indicators here
-        pass
-
-    def next(self):
-        # Add your trading logic here
-        pass
-"""
-
-    def _dual_ma_crossover_strategy_template(self) -> str:
-        return """
-# Dual MA Crossover Strategy Template
-import backtrader as bt
-
-class DualMACrossoverStrategy(bt.Strategy):
-    params = (
-        ('fast_period', 10),
-        ('slow_period', 30),
-    )
-
-    def __init__(self):
-        # Add your indicators here
-        pass
-
-    def next(self):
-        # Add your trading logic here
-        pass
-"""
-
-    def _macd_strategy_template(self) -> str:
-        return """
-# MACD Strategy Template
-import backtrader as bt
-
-class MACDStrategy(bt.Strategy):
-    params = (
-        ('macd1', 12),
-        ('macd2', 26),
-        ('macdsig', 9),
-    )
-
-    def __init__(self):
-        # Add your indicators here
-        pass
-
-    def next(self):
-        # Add your trading logic here
-        pass
-"""
-
-    def _rsi_strategy_template(self) -> str:
-        return """
-# RSI Strategy Template
-import backtrader as bt
-
-class RSIStrategy(bt.Strategy):
-    params = (
-        ('rsi_period', 14),
-        ('rsi_overbought', 70),
-        ('rsi_oversold', 30),
-    )
-
-    def __init__(self):
-        # Add your indicators here
-        pass
-
-    def next(self):
-        # Add your trading logic here
-        pass
-"""
-
-    def _bollinger_bands_strategy_template(self) -> str:
-        return """
-# Bollinger Bands Strategy Template
-import backtrader as bt
-
-class BollingerBandsStrategy(bt.Strategy):
-    params = (
-        ('bb_period', 20),
-        ('bb_devfactor', 2),
-    )
-
-    def __init__(self):
-        # Add your indicators here
-        pass
-
-    def next(self):
-        # Add your trading logic here
-        pass
-"""
-
-    def _custom_strategy_template(self) -> str:
-        return """
-# Custom Strategy Template
-import backtrader as bt
-
-class CustomStrategy(bt.Strategy):
-    params = (
-        # Define your parameters here
-    )
-
-    def __init__(self):
-        # Add your indicators here
-        pass
-
-    def next(self):
-        # Add your trading logic here
-        pass
-"""
 
     def _generate_dynamic_strategy(
         self,
@@ -1196,17 +549,7 @@ if __name__ == "__main__":
         try:
             tool = StrategyGeneratorTool()
 
-            # Test listing available strategies
-            result = await tool.execute(command="list_available_strategies")
-            print("Available Strategies:")
-            print(result.output)
-
-            # Test getting a strategy template
-            result = await tool.execute(command="get_strategy_template", strategy_type="momentum")
-            print("\nMomentum Strategy Template:")
-            print(result.output)
-
-            # Test generating a strategy
+            # 测试生成策略
             mock_analysis = {
                 "technical_analysis": {
                     "trend": {"is_uptrend": True},
@@ -1228,15 +571,14 @@ if __name__ == "__main__":
 
             result = await tool.execute(
                 command="generate_strategy",
-                strategy_type="momentum",
                 analysis_results=mock_analysis,
                 risk_params=mock_risk_params
             )
 
-            print("\nGenerated Strategy:")
+            print("\n生成的策略:")
             print(result.output)
 
         except Exception as e:
-            print(f"Error in test: {str(e)}")
+            print(f"测试出错: {str(e)}")
 
     asyncio.run(test())

@@ -14,6 +14,8 @@ import re
 from typing import Dict, List, Optional, Union, Any
 from pathlib import Path
 import logging
+import time
+from datetime import date, datetime, timedelta
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -458,6 +460,31 @@ class StockCodeGeneratorTool(BaseTool):
                     if not date_param_warning:
                         logger.info("所有日期参数格式已正确 (YYYYMMDD)")
 
+            # 判断是否为历史数据API并需要循环处理
+            is_historical_api = (
+                "hist" in api_name.lower() or
+                "daily" in api_name.lower() or
+                "历史" in api_doc.get("content", "").lower()
+            )
+
+            start_date_param = None
+            end_date_param = None
+
+            if is_historical_api and params:
+                for key in params.keys():
+                    if any(keyword in key.lower() for keyword in ["start", "begin", "from", "开始"]):
+                        start_date_param = key
+                    elif any(keyword in key.lower() for keyword in ["end", "to", "结束"]):
+                        end_date_param = key
+
+            historical_notice = ""
+            if is_historical_api:
+                historical_notice = (
+                    "注意: 检测到您正在获取历史数据，系统将自动获取当前日期往前约10个交易日的数据。"
+                    "如果您提供了起始日期和结束日期参数，它们将被自动替换为当前日期区间。"
+                )
+                logger.info("历史数据获取已配置为获取最近10个交易日的数据")
+
             # 生成代码
             generated_code = self._generate_code(api_name, api_doc, params, plot)
 
@@ -470,6 +497,10 @@ class StockCodeGeneratorTool(BaseTool):
             # 如果有日期参数警告，添加到结果中
             if date_param_warning:
                 result["warning"] = date_param_warning.strip()
+
+            # 添加历史数据获取说明
+            if historical_notice:
+                result["historical_notice"] = historical_notice
 
             # 如果需要执行代码
             if execute_code:
@@ -577,7 +608,7 @@ class StockCodeGeneratorTool(BaseTool):
             "import json",
             "import tempfile",
             "import re",
-            "from datetime import date, datetime",
+            "from datetime import date, datetime, timedelta",
             "",
             "# Define JSON encoder for datetime/date objects",
             "class DateTimeEncoder(json.JSONEncoder):",
@@ -646,31 +677,93 @@ class StockCodeGeneratorTool(BaseTool):
                            for keyword in ["date", "日期", "time", "时间", "start", "end", "开始", "结束"]):
                         date_params.append(param_name)
 
-        # 添加日期参数处理注释
-        code_lines.append("# 注意: akshare API需要日期格式为'YYYYMMDD'，如'20201103'，而不是'2020-11-03'")
+   
+        # 判断是否为历史数据API
+        is_historical_api = (
+            "hist" in api_name.lower() or
+            "daily" in api_name.lower() or
+            "历史" in api_doc.get("content", "").lower() or
+            bool(date_params)
+        )
 
-        # 生成函数调用
-        if params:
-            # 格式化参数，对日期参数进行特殊处理
-            param_strs = []
-            for key, value in params.items():
-                # 识别日期参数并格式化
-                param_is_date = (
-                    key in date_params or
-                    any(date_keyword in key.lower() for date_keyword in ["date", "time", "start", "end", "日期", "时间", "开始", "结束"])
-                )
+        # 确定日期参数名称
+        start_date_param = None
+        end_date_param = None
 
-                if param_is_date and isinstance(value, str):
-                    param_strs.append(f"{key}=format_date_param('{value}')")
-                elif isinstance(value, str):
-                    param_strs.append(f"{key}='{value}'")
-                else:
-                    param_strs.append(f"{key}={value}")
+        if is_historical_api and params:
+            for key in params.keys():
+                if any(keyword in key.lower() for keyword in ["start", "begin", "from", "开始"]):
+                    start_date_param = key
+                elif any(keyword in key.lower() for keyword in ["end", "to", "结束"]):
+                    end_date_param = key
 
-            param_str = ", ".join(param_strs)
-            code_lines.append(f"result = ak.{api_name}({param_str})")
+        # 对于历史数据API，自动计算当前日期往前10个交易日的日期范围
+        if is_historical_api:
+            # 准备基本参数（除日期外的其他参数）
+            base_params = {}
+            if params:
+                for key, value in params.items():
+                    if (start_date_param and key == start_date_param) or (end_date_param and key == end_date_param):
+                        # 日期参数跳过，将使用自动计算的日期范围
+                        continue
+                    elif isinstance(value, str):
+                        if any(date_keyword in key.lower() for date_keyword in ["date", "time", "日期", "时间"]):
+                            base_params[key] = f"format_date_param('{value}')"
+                        else:
+                            base_params[key] = f"'{value}'"
+                    else:
+                        base_params[key] = str(value)
+
+            # 构建基本参数字符串
+            base_param_strs = [f"{key}={value}" for key, value in base_params.items()]
+            base_param_str = ", ".join(base_param_strs)
+            if base_param_str:
+                base_param_str += ", "
+
+            # 自动计算日期范围的代码
+            code_lines.extend([
+                "",
+                "# 自动计算日期范围（当前日期往前10个交易日）",
+                "end_date = datetime.now()",
+                "start_date = end_date - timedelta(days=20)  # 往前20天，确保能覆盖10个交易日",
+                "",
+                "# 转换为akshare所需的格式",
+                "end_date_str = end_date.strftime('%Y%m%d')",
+                "start_date_str = start_date.strftime('%Y%m%d')",
+                "",
+
+            ])
+
+            # 生成API调用代码
+            if start_date_param and end_date_param:
+                code_lines.append(f"result = ak.{api_name}({base_param_str}{start_date_param}=start_date_str, {end_date_param}=end_date_str)")
+            else:
+                # 如果未明确识别出日期参数名称，但仍是历史API，使用默认命名
+                code_lines.append(f"# 注意：未明确识别出日期参数名称，使用通用参数名")
+                code_lines.append(f"result = ak.{api_name}({base_param_str}start_date=start_date_str, end_date=end_date_str)")
         else:
-            code_lines.append(f"result = ak.{api_name}()")
+            # 标准API调用（非历史数据API）
+            if params:
+                # 格式化参数，对日期参数进行特殊处理
+                param_strs = []
+                for key, value in params.items():
+                    # 识别日期参数并格式化
+                    param_is_date = (
+                        key in date_params or
+                        any(date_keyword in key.lower() for date_keyword in ["date", "time", "start", "end", "日期", "时间", "开始", "结束"])
+                    )
+
+                    if param_is_date and isinstance(value, str):
+                        param_strs.append(f"{key}=format_date_param('{value}')")
+                    elif isinstance(value, str):
+                        param_strs.append(f"{key}='{value}'")
+                    else:
+                        param_strs.append(f"{key}={value}")
+
+                param_str = ", ".join(param_strs)
+                code_lines.append(f"result = ak.{api_name}({param_str})")
+            else:
+                code_lines.append(f"result = ak.{api_name}()")
 
         code_lines.extend([
             "",
@@ -828,8 +921,60 @@ class StockCodeGeneratorTool(BaseTool):
                     "message": "输出不是JSON格式",
                     "code_file": code_path
                 }
-                # 保存输出信息
-                output_path = save_to_workspace(result.stdout, f"{execution_id}_output.txt", "stock_code")
+                # 尝试将原始输出转换为规范的JSON格式
+                try:
+                    # 检查输出是否是表格格式
+                    lines = result.stdout.strip().split('\n')
+
+                    if lines and ('\t' in lines[0] or ',' in lines[0]):
+                        # 尝试将表格数据转换为JSON格式
+                        try:
+                            import pandas as pd
+                            import io
+
+                            # 根据分隔符创建DataFrame
+                            delimiter = '\t' if '\t' in lines[0] else ','
+                            df = pd.read_csv(io.StringIO(result.stdout), sep=delimiter)
+
+                            # 转换为JSON格式
+                            json_data = {
+                                "data": df.to_dict(orient='records'),
+                                "columns": list(df.columns),
+                                "total_rows": len(df)
+                            }
+
+                            # 保存为JSON文件
+                            json_content = json.dumps(json_data, ensure_ascii=False, indent=2)
+                            output_path = save_to_workspace(json_content, f"{execution_id}_output.json", "stock_code", is_json=True)
+                        except Exception as e:
+                            # 如果转换失败，创建简单的JSON数据
+                            logger.exception(f"转换表格数据为JSON时出错: {str(e)}")
+                            default_json = {
+                                "raw_data": result.stdout,
+                                "message": "无法解析为结构化数据，提供原始输出",
+                                "timestamp": datetime.now().isoformat()
+                            }
+                            output_path = save_to_workspace(default_json, f"{execution_id}_output.json", "stock_code", is_json=True)
+                    else:
+                        # 非表格数据，创建包含原始文本的JSON
+                        json_data = {
+                            "raw_data": result.stdout,
+                            "message": "非表格格式数据",
+                            "timestamp": datetime.now().isoformat()
+                        }
+                        output_path = save_to_workspace(json_data, f"{execution_id}_output.json", "stock_code", is_json=True)
+
+                except Exception as e:
+                    logger.exception(f"转换为JSON格式时出错: {str(e)}")
+                    # 创建包含原始文本的JSON
+                    default_json = {
+                        "raw_data": result.stdout,
+                        "message": "处理输出时出错，提供原始数据",
+                        "error": str(e),
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    output_path = save_to_workspace(default_json, f"{execution_id}_output.json", "stock_code", is_json=True)
+
                 output_info["output_file"] = output_path
 
                 # 保存结果信息

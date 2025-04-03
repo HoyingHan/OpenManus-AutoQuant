@@ -114,7 +114,7 @@ class StockAnalysisTool(BaseTool):
                 df = pd.DataFrame(data["data_sample"])
             else:
                 # Assume it's a directly usable data structure
-                df = pd.DataFrame(data)
+                df = pd.DataFrame(data if isinstance(data, list) else [data])
 
         # Standardize column names
         column_mapping = {
@@ -135,7 +135,15 @@ class StockAnalysisTool(BaseTool):
 
         # Convert date to datetime if it's not already
         if not pd.api.types.is_datetime64_any_dtype(df['date']):
-            df['date'] = pd.to_datetime(df['date'])
+            try:
+                # 检查是否有嵌套列表并尝试提取
+                df['date'] = df['date'].apply(lambda x: x[0] if isinstance(x, list) else x)
+                df['date'] = pd.to_datetime(df['date'])
+            except Exception as e:
+                # 如果转换失败，创建一个基本的日期索引
+                 print(f"日期转换错误：{e}，使用默认索引代替")
+                 df['date'] = pd.date_range(start='2025-01-01', periods=len(df), freq='D')
+
 
         # Sort by date
         df = df.sort_values('date')

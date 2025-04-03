@@ -4,7 +4,7 @@ import json
 import os
 import tempfile
 from typing import Dict, List, Optional, Tuple, Any
-import datetime
+from datetime import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -173,13 +173,13 @@ class BacktestTool(BaseTool):
 
                 if start_date:
                     try:
-                        start_date_obj = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+                        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
                     except ValueError:
                         return ToolResult(error=f"无效的开始日期格式: {start_date}，请使用YYYY-MM-DD格式")
 
                 if end_date:
                     try:
-                        end_date_obj = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+                        end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
                     except ValueError:
                         return ToolResult(error=f"无效的结束日期格式: {end_date}，请使用YYYY-MM-DD格式")
 
@@ -220,8 +220,8 @@ class BacktestTool(BaseTool):
         self,
         strategy_file: str,
         data_file: str,
-        start_date: Optional[datetime.datetime] = None,
-        end_date: Optional[datetime.datetime] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
         initial_capital: float = 100000.0,
         commission: float = 0.001,
         strategy_params: Dict = {}
@@ -347,7 +347,7 @@ class BacktestTool(BaseTool):
             # 准备结果对象
             results_obj = {
                 "id": backtest_id,
-                "timestamp": datetime.datetime.now().isoformat(),
+                "timestamp": datetime.now().isoformat(),
                 "strategy": os.path.basename(strategy_file),
                 "data": os.path.basename(data_file),
                 "parameters": {

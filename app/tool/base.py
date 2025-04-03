@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 import os
 import json
 from pathlib import Path
-import datetime
+from datetime import datetime  # 导入datetime类
 
 from pydantic import BaseModel, Field
 
@@ -83,7 +83,7 @@ def generate_timestamp_id(prefix: str = "") -> str:
     返回:
         格式为 "prefix_YYYYMMDDHHmmss" 的ID字符串
     """
-    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     return f"{prefix}_{timestamp}" if prefix else timestamp
 
 

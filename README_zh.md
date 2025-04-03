@@ -139,6 +139,30 @@ python run_mcp.py
 python run_flow.py
 ```
 
+## 策略生成
+
+策略生成器现在采用了全动态生成方式。系统会根据市场分析数据自动构建最适合的交易策略，无需手动指定策略类型。
+
+使用示例:
+```python
+# 生成动态策略
+result = await strategy_generator_tool.execute(
+    command="generate_strategy",
+    analysis_results=analysis_results,  # 必须提供分析结果
+    risk_params={  # 可选的风险参数
+        "target_annual_return": 0.20,
+        "max_drawdown": 0.15
+    },
+    custom_params={  # 可选的自定义参数
+        "use_sma": True,
+        "use_rsi": True,
+        "rsi_period": 14
+    }
+)
+```
+
+动态策略会结合多种技术指标（如移动平均线、RSI、MACD、布林带等），并根据市场趋势和波动性自动调整交易参数和决策逻辑。
+
 ## 贡献指南
 
 我们欢迎任何友好的建议和有价值的贡献！可以直接创建 issue 或提交 pull request。
