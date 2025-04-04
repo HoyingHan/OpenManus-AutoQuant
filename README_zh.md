@@ -1,31 +1,28 @@
-<p align="center">
-  <img src="assets/logo.jpg" width="200"/>
-</p>
 
-[English](README.md) | 中文 | [한국어](README_ko.md) | [日本語](README_ja.md)
+[English](README.md) | 中文
 
-[![GitHub stars](https://img.shields.io/github/stars/mannaandpoem/OpenManus?style=social)](https://github.com/mannaandpoem/OpenManus/stargazers)
-&ensp;
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) &ensp;
-[![Discord Follow](https://dcbadge.vercel.app/api/server/DYn29wFk9z?style=flat)](https://discord.gg/DYn29wFk9z)
-[![Demo](https://img.shields.io/badge/Demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/lyh-917/OpenManusDemo)
 
-# 👋 OpenManus
+# 👋 OpenManus-AutoQuant（自迭代金融量化Agent）
 
-Manus 非常棒，但 OpenManus 无需邀请码即可实现任何创意 🛫！
+## 项目描述
 
-我们的团队成员 [@Xinbin Liang](https://github.com/mannaandpoem) 和 [@Jinyu Xiang](https://github.com/XiangJinyu)（核心作者），以及 [@Zhaoyang Yu](https://github.com/MoshiQAQ)、[@Jiayi Zhang](https://github.com/didiforgithub) 和 [@Sirui Hong](https://github.com/stellaHSR)，来自 [@MetaGPT](https://github.com/geekan/MetaGPT)团队。我们在 3
-小时内完成了开发并持续迭代中！
+传统的金融量化的工作流程是：分析数据 → 构造因子 → 编写策略代码 → 回测代码 → 优化策略直到达到回测标准，开发周期长且依赖人工经验，难以应对高频市场变化。
 
-这是一个简洁的实现方案，欢迎任何建议、贡献和反馈！
+OpenManus-AutoQuant 的目标是：将上述过程自动化，由AI构思策略，写代码，回测，优化再回测，直到满足最终目标。核心在于自生成、自迭代、自优化。
 
-用 OpenManus 开启你的智能体之旅吧！
+## 项目技术亮点
 
-我们也非常高兴地向大家介绍 [OpenManus-RL](https://github.com/OpenManus/OpenManus-RL)，这是一个专注于基于强化学习（RL，例如 GRPO）的方法来优化大语言模型（LLM）智能体的开源项目，由来自UIUC 和 OpenManus 的研究人员合作开发。
+1. **精准数据管道**：集成 akshare 股票数据源，通过结构化接口文档与数据校验模块，确保数据质量与准确。
+2. **数据分析**：针对股票数据的特性做了业务性增强。
+3. **策略生成**：基于分析结果动态生成策略。
+4. **智能回测**：整合 backtrader 框架，支持多维度评估（Sharpe比率、最大回撤、胜率）。
+5. **策略优化**：基于回测数据对策略进行优化。
 
-## 项目演示
+## 应用场景与价值
 
-<video src="https://private-user-images.githubusercontent.com/61239030/420168772-6dcfd0d2-9142-45d9-b74e-d10aa75073c6.mp4?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NDEzMTgwNTksIm5iZiI6MTc0MTMxNzc1OSwicGF0aCI6Ii82MTIzOTAzMC80MjAxNjg3NzItNmRjZmQwZDItOTE0Mi00NWQ5LWI3NGUtZDEwYWE3NTA3M2M2Lm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTAzMDclMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUwMzA3VDAzMjIzOVomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTdiZjFkNjlmYWNjMmEzOTliM2Y3M2VlYjgyNDRlZDJmOWE3NWZhZjE1MzhiZWY4YmQ3NjdkNTYwYTU5ZDA2MzYmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.UuHQCgWYkh0OQq9qsUWqGsUbhG3i9jcZDAMeHjLt5T4" data-canonical-src="https://private-user-images.githubusercontent.com/61239030/420168772-6dcfd0d2-9142-45d9-b74e-d10aa75073c6.mp4?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NDEzMTgwNTksIm5iZiI6MTc0MTMxNzc1OSwicGF0aCI6Ii82MTIzOTAzMC80MjAxNjg3NzItNmRjZmQwZDItOTE0Mi00NWQ5LWI3NGUtZDEwYWE3NTA3M2M2Lm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNTAzMDclMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjUwMzA3VDAzMjIzOVomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTdiZjFkNjlmYWNjMmEzOTliM2Y3M2VlYjgyNDRlZDJmOWE3NWZhZjE1MzhiZWY4YmQ3NjdkNTYwYTU5ZDA2MzYmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.UuHQCgWYkh0OQq9qsUWqGsUbhG3i9jcZDAMeHjLt5T4" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:640px; min-height: 200px"></video>
+- **私募基金**：快速生成备选策略池，降低研究员人力成本；
+- **个人投资者**：通过自然语言输入投资偏好，自动生成定制策略；
+- **学术研究**：提供策略生成过程的思维链日志，辅助市场行为学研究。
 
 ## 安装指南
 
@@ -64,8 +61,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 2. 克隆仓库：
 
 ```bash
-git clone https://github.com/mannaandpoem/OpenManus.git
-cd OpenManus
+git clone https://github.com/lumina-lumi/OpenManus-AutoQuant.git
+cd OpenManus-AutoQuant
 ```
 
 3. 创建并激活虚拟环境：
@@ -90,124 +87,3 @@ uv pip install -r requirements.txt --index-url https://mirrors.aliyun.com/pypi/s
 playwright install
 ```
 
-## 配置说明
-
-OpenManus 需要配置使用的 LLM API，请按以下步骤设置：
-
-1. 在 `config` 目录创建 `config.toml` 文件（可从示例复制）：
-
-```bash
-cp config/config.example.toml config/config.toml
-```
-
-2. 编辑 `config/config.toml` 添加 API 密钥和自定义设置：
-
-```toml
-# 全局 LLM 配置
-[llm]
-model = "gpt-4o"
-base_url = "https://api.openai.com/v1"
-api_key = "sk-..."  # 替换为真实 API 密钥
-max_tokens = 4096
-temperature = 0.0
-
-# 可选特定 LLM 模型配置
-[llm.vision]
-model = "gpt-4o"
-base_url = "https://api.openai.com/v1"
-api_key = "sk-..."  # 替换为真实 API 密钥
-```
-
-## 快速启动
-
-一行命令运行 OpenManus：
-
-```bash
-python main.py
-```
-
-然后通过终端输入你的创意！
-
-如需使用 MCP 工具版本，可运行：
-```bash
-python run_mcp.py
-```
-
-如需体验不稳定的多智能体版本，可运行：
-
-```bash
-python run_flow.py
-```
-
-## 策略生成
-
-策略生成器现在采用了全动态生成方式。系统会根据市场分析数据自动构建最适合的交易策略，无需手动指定策略类型。
-
-使用示例:
-```python
-# 生成动态策略
-result = await strategy_generator_tool.execute(
-    command="generate_strategy",
-    analysis_results=analysis_results,  # 必须提供分析结果
-    risk_params={  # 可选的风险参数
-        "target_annual_return": 0.20,
-        "max_drawdown": 0.15
-    },
-    custom_params={  # 可选的自定义参数
-        "use_sma": True,
-        "use_rsi": True,
-        "rsi_period": 14
-    }
-)
-```
-
-动态策略会结合多种技术指标（如移动平均线、RSI、MACD、布林带等），并根据市场趋势和波动性自动调整交易参数和决策逻辑。
-
-## 贡献指南
-
-我们欢迎任何友好的建议和有价值的贡献！可以直接创建 issue 或提交 pull request。
-
-或通过 📧 邮件联系 @mannaandpoem：mannaandpoem@gmail.com
-
-**注意**: 在提交 pull request 之前，请使用 pre-commit 工具检查您的更改。运行 `pre-commit run --all-files` 来执行检查。
-
-## 交流群
-
-加入我们的飞书交流群，与其他开发者分享经验！
-
-<div align="center" style="display: flex; gap: 20px;">
-    <img src="assets/community_group.jpg" alt="OpenManus 交流群" width="300" />
-</div>
-
-## Star 数量
-
-[![Star History Chart](https://api.star-history.com/svg?repos=mannaandpoem/OpenManus&type=Date)](https://star-history.com/#mannaandpoem/OpenManus&Date)
-
-
-## 赞助商
-感谢[PPIO](https://ppinfra.com/user/register?invited_by=OCPKCN&utm_source=github_openmanus&utm_medium=github_readme&utm_campaign=link) 提供的算力支持。
-> PPIO派欧云：一键调用高性价比的开源模型API和GPU容器
-
-## 致谢
-
-特别感谢 [anthropic-computer-use](https://github.com/anthropics/anthropic-quickstarts/tree/main/computer-use-demo)
-和 [browser-use](https://github.com/browser-use/browser-use) 为本项目提供的基础支持！
-
-此外，我们感谢 [AAAJ](https://github.com/metauto-ai/agent-as-a-judge)，[MetaGPT](https://github.com/geekan/MetaGPT)，[OpenHands](https://github.com/All-Hands-AI/OpenHands) 和 [SWE-agent](https://github.com/SWE-agent/SWE-agent).
-
-我们也感谢阶跃星辰 (stepfun) 提供的 Hugging Face 演示空间支持。
-
-OpenManus 由 MetaGPT 社区的贡献者共同构建，感谢这个充满活力的智能体开发者社区！
-
-## 引用我们
-
-```bibtex
-@misc{openmanus2025,
-  author = {Xinbin Liang and Jinyu Xiang and Zhaoyang Yu and Jiayi Zhang and Sirui Hong},
-  title = {OpenManus: An open-source framework for building general AI agents},
-  year = {2025},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/mannaandpoem/OpenManus}},
-}
-```
