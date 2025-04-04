@@ -274,6 +274,7 @@ class StrategyGeneratorTool(BaseTool):
             else:
                 insights["recommended_action"] = "hold"
 
+        
         return insights
 
     def _generate_dynamic_strategy(
@@ -451,7 +452,7 @@ class DynamicStrategy(bt.Strategy):
         \"\"\"
 
         # 交易统计
-        self.order = None
+        self.order = []
         self.buyprice = None
         self.buycomm = None
         self.bar_executed = None
@@ -534,11 +535,9 @@ class DynamicStrategy(bt.Strategy):
         self.log(f'起始资金: {{self.broker.startingcash:.2f}}, 最终资金: {{self.broker.getvalue():.2f}}, 总收益率: {{((self.broker.getvalue() / self.broker.startingcash) - 1) * 100:.2f}}%')
 
     # 用于回测的主程序
-    if __name__ == '__main__':
-         # 此部分代码用于直接运行策略进行回测
-        print("这是一个自动生成的策略模板，请与回测框架结合使用")
 """
-        return strategy_template
+
+
 
 # For testing
 if __name__ == "__main__":
