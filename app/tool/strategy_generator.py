@@ -135,8 +135,9 @@ class StrategyGeneratorTool(BaseTool):
 
         # 保存策略到工作空间
         try:
+            logger.info(f"尝试保存策略文件到: strategies")
+            logger.info(f"策略代码长度: {len(strategy_code)}")
             strategy_file_path = save_to_workspace(strategy_code, strategy_filename, "strategies")
-            logger.info(f"交易策略已保存到: {strategy_file_path}")
 
             # 保存策略元数据
             strategy_metadata = {
@@ -274,8 +275,8 @@ class StrategyGeneratorTool(BaseTool):
             else:
                 insights["recommended_action"] = "hold"
 
-        
         return insights
+
 
     def _generate_dynamic_strategy(
         self,
@@ -297,6 +298,8 @@ class StrategyGeneratorTool(BaseTool):
         返回:
             生成的策略代码
         """
+
+
         # 设置默认值
         custom_params = custom_params or {}
 
@@ -473,12 +476,12 @@ class DynamicStrategy(bt.Strategy):
 
         if order.status in [order.Completed]:
             if order.isbuy():
-                self.log(f'买入执行: 价格: {order.executed.price:.2f}, 成本: {order.executed.value:.2f}, 手续费: {order.executed.comm:.2f}')
+                self.log(f'买入执行: 价格: order.executed.price:.2f, 成本: order.executed.value:.2f, 手续费: order.executed.comm:.2f')
                 self.buyprice = order.executed.price
                 self.buycomm = order.executed.comm
             else:
                 profit = (order.executed.price - self.buyprice) * order.executed.size if self.buyprice else 0
-                self.log(f'卖出执行: 价格: {order.executed.price:.2f}, 利润: {profit:.2f}')
+                self.log(f'卖出执行: 价格: order.executed.price:.2f, 利润: profit:.2f')
 
             self.bar_executed = len(self)
 
@@ -533,51 +536,9 @@ class DynamicStrategy(bt.Strategy):
         win_rate = self.profitable_trades / self.trade_count * 100 if self.trade_count > 0 else 0
         self.log(f'交易总数: {{self.trade_count}}, 获利交易: {{self.profitable_trades}}, 胜率: {{win_rate:.2f}}%')
         self.log(f'起始资金: {{self.broker.startingcash:.2f}}, 最终资金: {{self.broker.getvalue():.2f}}, 总收益率: {{((self.broker.getvalue() / self.broker.startingcash) - 1) * 100:.2f}}%')
-
-    # 用于回测的主程序
 """
+        return strategy_template
 
 
 
-# For testing
-if __name__ == "__main__":
-    import asyncio
-    import json
 
-    async def test():
-        try:
-            tool = StrategyGeneratorTool()
-
-            # 测试生成策略
-            mock_analysis = {
-                "technical_analysis": {
-                    "trend": {"is_uptrend": True},
-                    "momentum": {"rsi": 45, "is_macd_bullish": True},
-                    "volatility": {"volatility_percentage": 2.5},
-                    "bollinger_bands": {"price_relative_to_band": "MIDDLE"}
-                },
-                "market_condition": {
-                    "overall_assessment": {"condition": "FAVORABLE"}
-                }
-            }
-
-            mock_risk_params = {
-                "target_annual_return": 0.20,
-                "max_drawdown": 0.15,
-                "sharpe_ratio": 1.2,
-                "profit_loss_ratio": 1.8
-            }
-
-            result = await tool.execute(
-                command="generate_strategy",
-                analysis_results=mock_analysis,
-                risk_params=mock_risk_params
-            )
-
-            print("\n生成的策略:")
-            print(result.output)
-
-        except Exception as e:
-            print(f"测试出错: {str(e)}")
-
-    asyncio.run(test())

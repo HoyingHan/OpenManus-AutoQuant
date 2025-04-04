@@ -677,7 +677,7 @@ class StockCodeGeneratorTool(BaseTool):
                            for keyword in ["date", "日期", "time", "时间", "start", "end", "开始", "结束"]):
                         date_params.append(param_name)
 
-   
+
         # 判断是否为历史数据API
         is_historical_api = (
             "hist" in api_name.lower() or
@@ -883,6 +883,10 @@ class StockCodeGeneratorTool(BaseTool):
             import subprocess
             result = subprocess.run(['python', code_path], capture_output=True, text=True)
 
+            # 打印执行结果
+            logger.info(f"代码执行结果: {result.stdout}")
+            if result.stderr:
+                logger.warning(f"代码执行警告/错误: {result.stderr}")
             if result.returncode != 0:
                 error_info = {
                     "status": "error",
@@ -927,7 +931,7 @@ class StockCodeGeneratorTool(BaseTool):
                     lines = result.stdout.strip().split('\n')
 
                     if lines and ('\t' in lines[0] or ',' in lines[0]):
-                        # 尝试将表格数据转换为JSON格式
+                        # 尝试将表格数据转换为CSV格式
                         try:
                             import pandas as pd
                             import io
@@ -936,38 +940,45 @@ class StockCodeGeneratorTool(BaseTool):
                             delimiter = '\t' if '\t' in lines[0] else ','
                             df = pd.read_csv(io.StringIO(result.stdout), sep=delimiter)
 
-                            # 转换为JSON格式
-                            json_data = {
-                                "data": df.to_dict(orient='records'),
+                            # 生成CSV文件名
+                            csv_filename = f"{execution_id}_output.csv"
+                            # 保存为CSV文件
+                            output_path = save_to_workspace(df.to_csv(index=False), csv_filename, "stock_code")
+
+                            # 创建CSV输出的元数据
+                            csv_metadata = {
+                                "file_path": output_path,
                                 "columns": list(df.columns),
-                                "total_rows": len(df)
+                                "total_rows": len(df),
+                                "format": "csv"
                             }
 
-                            # 保存为JSON文件
-                            json_content = json.dumps(json_data, ensure_ascii=False, indent=2)
-                            output_path = save_to_workspace(json_content, f"{execution_id}_output.json", "stock_code", is_json=True)
+                            # 保存元数据
+                            metadata_path = save_to_workspace(csv_metadata, f"{execution_id}_metadata.json", "stock_code", is_json=True)
+                            output_path = metadata_path
+
                         except Exception as e:
-                            # 如果转换失败，创建简单的JSON数据
-                            logger.exception(f"转换表格数据为JSON时出错: {str(e)}")
-                            default_json = {
+                            # 如果转换失败，记录原始输出
+                            logger.exception(f"转换表格数据为CSV时出错: {str(e)}")
+                            error_data = {
                                 "raw_data": result.stdout,
-                                "message": "无法解析为结构化数据，提供原始输出",
+                                "message": "无法解析为CSV格式，提供原始输出",
                                 "timestamp": datetime.now().isoformat()
                             }
-                            output_path = save_to_workspace(default_json, f"{execution_id}_output.json", "stock_code", is_json=True)
+                            output_path = save_to_workspace(error_data, f"{execution_id}_error.json", "stock_code", is_json=True)
                     else:
-                        # 非表格数据，创建包含原始文本的JSON
-                        json_data = {
+                        # 非表格数据，保存原始文本
+                        raw_data = {
                             "raw_data": result.stdout,
-                            "message": "非表格格式数据",
+                            "message": "非表格格式数据，无法转换为CSV",
                             "timestamp": datetime.now().isoformat()
                         }
-                        output_path = save_to_workspace(json_data, f"{execution_id}_output.json", "stock_code", is_json=True)
+                        output_path = save_to_workspace(raw_data, f"{execution_id}_raw.json", "stock_code", is_json=True)
 
                 except Exception as e:
-                    logger.exception(f"转换为JSON格式时出错: {str(e)}")
-                    # 创建包含原始文本的JSON
-                    default_json = {
+                    logger.exception(f"转换为CSV格式时出错: {str(e)}")
+                    # 保存错误信息
+                    error_data = {
                         "raw_data": result.stdout,
                         "message": "处理输出时出错，提供原始数据",
                         "error": str(e),
